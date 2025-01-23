@@ -1,46 +1,51 @@
-# Use the official n8n image
-FROM n8nio/n8n:latest
+FROM node:16-alpine
 
-# Switch to root user to install dependencies
-USER root
+ARG N8N_VERSION
 
-# Install Puppeteer dependencies using apk (Alpine Linux package manager)
+RUN if [ -z "$N8N_VERSION" ] ; then echo "The N8N_VERSION argument is missing!" ; exit 1; fi
+
+# Update everything and install needed dependencies
+RUN apk add --update graphicsmagick tzdata git tini su-exec
+
+# Install n8n and the also temporary all the packages
+# it needs to build it correctly.
+RUN apk --update add --virtual build-dependencies python3 build-base ca-certificates && \
+	npm config set python "$(which python3)" && \
+	npm_config_user=root npm install -g full-icu n8n@${N8N_VERSION} && \
+	apk del build-dependencies \
+	&& rm -rf /root /tmp/* /var/cache/apk/* && mkdir /root;
+
+# Installs latest Chromium (100) package.
 RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    && rm -rf /var/cache/apk/*
+      chromium \
+      nss \
+      freetype \
+      harfbuzz \
+      ttf-freefont \
+      yarn
 
-# Install Puppeteer and Puppeteer Extra packages
-RUN npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
+# Tell Puppeteer to skip installing Chrome. We'll be using the installed package.
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-# Create the custom directory for community nodes
-RUN mkdir -p /home/node/.n8n/custom
+# Install community nodes
+RUN cd /usr/local/lib/node_modules/n8n && \
+    npm install n8n-nodes-puppeteer && \
+    npm install n8n-nodes-deepseek
 
-# Debug: Check the .n8n directory structure
-RUN ls -la /home/node/.n8n/
+# Install fonts
+RUN apk --no-cache add --virtual fonts msttcorefonts-installer fontconfig && \
+	update-ms-fonts && \
+	fc-cache -f && \
+	apk del fonts && \
+	find  /usr/share/fonts/truetype/msttcorefonts/ -type l -exec unlink {} \; \
+	&& rm -rf /root /tmp/* /var/cache/apk/* && mkdir /root
 
-# Debug: Check the custom directory structure
-RUN ls -la /home/node/.n8n/custom/
+ENV NODE_ICU_DATA /usr/local/lib/node_modules/full-icu
 
-# Remove existing Puppeteer node (if any)
-RUN rm -rf /home/node/.n8n/custom/n8n-nodes-puppeteer
+WORKDIR /data
 
-# Clone and install Puppeteer node
-RUN cd /home/node/.n8n/custom && \
-    git clone https://github.com/drudge/n8n-nodes-puppeteer.git && \
-    cd /home/node/.n8n/custom/n8n-nodes-puppeteer && npm install
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+ENTRYPOINT ["tini", "--", "/docker-entrypoint.sh"]
 
-# Clone and install Deepseek node
-RUN cd /home/node/.n8n/custom && \
-    git clone https://github.com/rubickecho/n8n-deepseek.git && \
-    cd /home/node/.n8n/custom/n8n-deepseek && npm install
-
-# Switch back to the non-root user (n8n user)
-USER node
-
-# Set the N8N_CUSTOM_EXTENSIONS environment variable
-ENV N8N_CUSTOM_EXTENSIONS=/home/node/.n8n/custom
+EXPOSE 5678/tcp
