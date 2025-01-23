@@ -1,4 +1,4 @@
-# Use the latest Node.js LTS version (e.g., Node.js 18 or 20)
+# Use the latest Node.js LTS version (e.g., Node.js 20)
 FROM node:20-alpine
 
 # Update everything and install needed dependencies
@@ -9,12 +9,14 @@ RUN apk add --update --no-cache \
     tini \
     su-exec
 
-# Install n8n and the also temporary all the packages
-# it needs to build it correctly.
-RUN apk add --virtual build-dependencies python3 build-base ca-certificates && \
-    npm config set python "$(which python3)" && \
-    npm_config_user=root npm install -g full-icu n8n && \
-    apk del build-dependencies && \
+# Install build dependencies
+RUN apk add --virtual build-dependencies python3 build-base ca-certificates
+
+# Install n8n and full-icu
+RUN npm_config_user=root npm install -g full-icu n8n
+
+# Remove build dependencies and clean up
+RUN apk del build-dependencies && \
     rm -rf /root /tmp/* /var/cache/apk/* && mkdir /root
 
 # Installs latest Chromium package.
