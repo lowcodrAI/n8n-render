@@ -17,9 +17,15 @@ RUN apk add --no-cache \
 # Install Puppeteer and Puppeteer Extra packages
 RUN npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
 
-# Install community nodes
-RUN npm install n8n-nodes-puppeteer
-RUN npm install n8n-nodes-deepseek
+# Copy community nodes from your repository
+COPY custom /home/node/.n8n/custom
+
+# Install dependencies for each community node
+RUN cd /home/node/.n8n/custom/n8n-nodes-puppeteer && npm install
+RUN cd /home/node/.n8n/custom/n8n-nodes-deepseek && npm install
 
 # Switch back to the non-root user (n8n user)
 USER node
+
+# Set the N8N_CUSTOM_EXTENSIONS environment variable
+ENV N8N_CUSTOM_EXTENSIONS=/home/node/.n8n/custom
