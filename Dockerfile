@@ -1,9 +1,5 @@
 FROM node:16-alpine
 
-ARG N8N_VERSION
-
-RUN if [ -z "$N8N_VERSION" ] ; then echo "The N8N_VERSION argument is missing!" ; exit 1; fi
-
 # Update everything and install needed dependencies
 RUN apk add --update graphicsmagick tzdata git tini su-exec
 
@@ -11,7 +7,7 @@ RUN apk add --update graphicsmagick tzdata git tini su-exec
 # it needs to build it correctly.
 RUN apk --update add --virtual build-dependencies python3 build-base ca-certificates && \
 	npm config set python "$(which python3)" && \
-	npm_config_user=root npm install -g full-icu n8n@${N8N_VERSION} && \
+	npm_config_user=root npm install -g full-icu n8n && \
 	apk del build-dependencies \
 	&& rm -rf /root /tmp/* /var/cache/apk/* && mkdir /root;
 
