@@ -1,4 +1,5 @@
-FROM n8nio/n8n:latest
+# Use the Debian-based n8n image
+FROM n8nio/n8n:latest-ubuntu
 
 # Install Puppeteer dependencies
 RUN apt-get update && apt-get install -y \
@@ -17,4 +18,4 @@ RUN npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
 
 # Install a community node
 RUN npm install n8n-nodes-puppeteer
-RUN npm insall n8n-ndoes-deepseek
+RUN npm install n8n-nodes-deepseek
