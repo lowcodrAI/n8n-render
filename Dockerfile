@@ -24,6 +24,9 @@ RUN apk add --no-cache \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
+# Install Puppeteer, Puppeteer Extra, and Stealth Plugin
+RUN npm install -g puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
+
 # Install community nodes
 RUN cd /usr/local/lib/node_modules/n8n && \
     npm install n8n-nodes-puppeteer && \
@@ -41,6 +44,10 @@ ENV NODE_ICU_DATA /usr/local/lib/node_modules/full-icu
 
 WORKDIR /data
 
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+ENTRYPOINT ["tini", "--", "/docker-entrypoint.sh"]
+
+EXPOSE 5678/tcp
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 ENTRYPOINT ["tini", "--", "/docker-entrypoint.sh"]
 
